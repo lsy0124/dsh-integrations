@@ -1,0 +1,13 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const home=process.env.DSH_HOME||path.join(process.env.APPDATA,'dsh-desktop','harness');process.env.DSH_HOME=home;
+const settings=JSON.parse(await fs.readFile(new URL('./runtime/client.json',import.meta.url),'utf8'));
+const mod=await import(pathToFileURL(path.join(home,'profiles/web/node_modules/dsh-connect-workbuddy/lib/index.js')));
+const client=new mod.WorkBuddyUpstreamClient();const store=new mod.WorkBuddyCredentialStore({region:settings.region,refresh:credential=>client.refreshToken(credential)});
+const credential=await store.credentialFor(settings.accountId);if(!credential)throw new Error('Selected credential missing');
+const models=mod.deriveCatalog(await client.fetchModels(credential),new Set());
+const clean=models.map(({id,name,contextWindow,maxTokens})=>({id,name,contextWindow,maxTokens}));
+if(clean.some(m=>!Number.isFinite(m.contextWindow)||!Number.isFinite(m.maxTokens)))throw new Error('Catalog limits are incomplete');
+await fs.writeFile(new URL('./runtime/models.json',import.meta.url),JSON.stringify(clean,null,2));
+console.log(JSON.stringify({models:clean.length,first:clean[0]}));

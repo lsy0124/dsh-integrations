@@ -1,0 +1,23 @@
+# 运行数据与本机密钥（绝不提交）
+runtime/
+*.log
+config.json
+.env
+.env.*
+
+# 凭据
+bili_credential.json
+.credentials.yaml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv-asr/
+
+# Node
+node_modules/
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db

@@ -1,0 +1,10 @@
+import fs from 'node:fs/promises';
+import {Readable} from 'node:stream';
+import {collectChatStream} from './server.mjs';
+const settings=JSON.parse(await fs.readFile(new URL('./runtime/client.json',import.meta.url),'utf8'));
+const response=await fetch(`http://127.0.0.1:${settings.port}/v1/chat/completions`,{method:'POST',headers:{authorization:'Bearer '+settings.clientKey,'content-type':'application/json'},body:JSON.stringify({model:'hy3',messages:[{role:'user',content:'Call verify_connection with message OK. This is a connection test only.'}],tools:[{type:'function',function:{name:'verify_connection',description:'A fake connection-check function. It is not executed.',parameters:{type:'object',properties:{message:{type:'string'}},required:['message']}}}],tool_choice:{type:'function',function:{name:'verify_connection'}},reasoning_effort:'off',max_tokens:256,stream:true}),signal:AbortSignal.timeout(90000)});
+if(!response.ok)throw new Error('Streaming request failed with HTTP '+response.status);
+const result=await collectChatStream(Readable.fromWeb(response.body));
+const calls=result.choices?.[0]?.message?.tool_calls||[];
+console.log(JSON.stringify({streaming:response.headers.get('content-type')?.includes('text/event-stream'),tool:calls[0]?.function?.name||null,finishReason:result.choices?.[0]?.finish_reason,executedTools:0}));
+if(calls[0]?.function?.name!=='verify_connection')process.exitCode=1;
